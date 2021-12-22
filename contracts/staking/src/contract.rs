@@ -66,10 +66,15 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 pub fn add_distribution_periods(
     deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     periods: Vec<(u64, u64, Uint128)>,
 ) -> StdResult<Response> {
     let mut config: Config = read_config(deps.storage)?;
+
+    if info.sender != config.distribution_account {
+        return Err(StdError::generic_err("unauthorized"));
+    }
+
     config.distribution_schedule.extend(periods);
     store_config(deps.storage, &config)?;
 
