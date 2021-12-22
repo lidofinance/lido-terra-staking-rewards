@@ -552,7 +552,7 @@ fn test_add_distribution_periods() {
     };
     let info = mock_info("distribution0000", &[]);
     let env = mock_env();
-    let _res = execute(deps.as_mut(), env.clone(), info, msg).unwrap();
+    let _res = execute(deps.as_mut(), env, info, msg).unwrap();
 
     // query config response
     assert_eq!(
