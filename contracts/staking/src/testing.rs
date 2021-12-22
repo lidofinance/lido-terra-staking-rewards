@@ -539,7 +539,7 @@ fn test_add_distribution_periods() {
     };
     let info = mock_info("staking0000", &[]);
     let env = mock_env();
-    let res = execute(deps.as_mut(), env.clone(), info, msg);
+    let res = execute(deps.as_mut(), env, info, msg);
 
     match res {
         Err(StdError::GenericErr { msg, .. }) => assert_eq!(msg, "unauthorized"),
