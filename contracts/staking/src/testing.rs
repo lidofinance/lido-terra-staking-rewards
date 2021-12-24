@@ -479,7 +479,7 @@ fn test_withdraw_multiple_holders() {
     });
     let info = mock_info("staking0000", &[]);
     let env = mock_env();
-    let _res = execute(deps.as_mut(), env.clone(), info, msg).unwrap();
+    let _res = execute(deps.as_mut(), env, info, msg).unwrap();
 
     // bond 25 tokens from user 2
     let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
