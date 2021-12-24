@@ -409,6 +409,55 @@ fn test_withdraw_single_holder() {
 }
 
 #[test]
+fn test_withdraw_overlapping_periods() {
+    let mut deps = mock_dependencies(&[]);
+
+    let msg = InstantiateMsg {
+        distribution_account: "distribution0000".to_string(),
+        ldo_token: "reward0000".to_string(),
+        staking_token: "staking0000".to_string(),
+        distribution_schedule: vec![
+            (12345, 12345 + 100, Uint128::from(1000000u128)),
+            (12345 + 50, 12345 + 150, Uint128::from(1000000u128)),
+        ],
+    };
+
+    let info = mock_info("addr0000", &[]);
+    let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+
+    // bond 100 tokens
+    let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
+        sender: "addr0000".to_string(),
+        amount: Uint128::from(100u128),
+        msg: to_binary(&Cw20HookMsg::Bond {}).unwrap(),
+    });
+    let info = mock_info("staking0000", &[]);
+    let mut env = mock_env();
+    let _res = execute(deps.as_mut(), env.clone(), info, msg).unwrap();
+
+    // 100 blocks passed
+    // 1,000,000  + 500,000 rewards distributed
+    env.block.height += 100;
+    let info = mock_info("addr0000", &[]);
+
+    let msg = ExecuteMsg::Withdraw {};
+    let res = execute(deps.as_mut(), env, info, msg).unwrap();
+
+    assert_eq!(
+        res.messages,
+        vec![SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: "reward0000".to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                recipient: "addr0000".to_string(),
+                amount: Uint128::from(1500000u128),
+            })
+                .unwrap(),
+            funds: vec![],
+        }))]
+    );
+}
+
+#[test]
 fn test_withdraw_multiple_holders() {
     let mut deps = mock_dependencies(&[]);
 
