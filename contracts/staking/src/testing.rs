@@ -360,7 +360,7 @@ fn test_compute_reward() {
 }
 
 #[test]
-fn test_withdraw() {
+fn test_withdraw_single_holder() {
     let mut deps = mock_dependencies(&[]);
 
     let msg = InstantiateMsg {
@@ -403,6 +403,83 @@ fn test_withdraw() {
                 amount: Uint128::from(1000000u128),
             })
             .unwrap(),
+            funds: vec![],
+        }))]
+    );
+}
+
+#[test]
+fn test_withdraw_multiple_holders() {
+    let mut deps = mock_dependencies(&[]);
+
+    let msg = InstantiateMsg {
+        distribution_account: "distribution0000".to_string(),
+        ldo_token: "reward0000".to_string(),
+        staking_token: "staking0000".to_string(),
+        distribution_schedule: vec![
+            (12345, 12345 + 100, Uint128::from(1000000u128)),
+        ],
+    };
+
+    let info = mock_info("addr0000", &[]);
+    let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+
+    // bond 75 tokens from user 1
+    let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
+        sender: "addr0001".to_string(),
+        amount: Uint128::from(75u128),
+        msg: to_binary(&Cw20HookMsg::Bond {}).unwrap(),
+    });
+    let info = mock_info("staking0000", &[]);
+    let env = mock_env();
+    let _res = execute(deps.as_mut(), env.clone(), info, msg).unwrap();
+
+    // bond 25 tokens from user 2
+    let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
+        sender: "addr0002".to_string(),
+        amount: Uint128::from(25u128),
+        msg: to_binary(&Cw20HookMsg::Bond {}).unwrap(),
+    });
+    let info = mock_info("staking0000", &[]);
+    let mut env = mock_env();
+    let _res = execute(deps.as_mut(), env.clone(), info, msg).unwrap();
+
+    // 100 blocks passed
+    // 1,000,000 rewards distributed as 75 to 25
+    env.block.height += 100;
+
+    // claim for the 1st user (750000 rewards accrued)
+    let info = mock_info("addr0001", &[]);
+    let msg = ExecuteMsg::Withdraw {};
+    let res = execute(deps.as_mut(), env.clone(), info, msg).unwrap();
+
+    assert_eq!(
+        res.messages,
+        vec![SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: "reward0000".to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                recipient: "addr0001".to_string(),
+                amount: Uint128::from(750000u128),
+            })
+                .unwrap(),
+            funds: vec![],
+        }))]
+    );
+
+    // claim for the 2nd user (250000 rewards accrued)
+    let info = mock_info("addr0002", &[]);
+    let msg = ExecuteMsg::Withdraw {};
+    let res = execute(deps.as_mut(), env, info, msg).unwrap();
+
+    assert_eq!(
+        res.messages,
+        vec![SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: "reward0000".to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                recipient: "addr0002".to_string(),
+                amount: Uint128::from(250000u128),
+            })
+                .unwrap(),
             funds: vec![],
         }))]
     );
