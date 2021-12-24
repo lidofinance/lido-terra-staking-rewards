@@ -451,7 +451,7 @@ fn test_withdraw_overlapping_periods() {
                 recipient: "addr0000".to_string(),
                 amount: Uint128::from(1500000u128),
             })
-                .unwrap(),
+            .unwrap(),
             funds: vec![],
         }))]
     );
@@ -465,9 +465,7 @@ fn test_withdraw_multiple_holders() {
         distribution_account: "distribution0000".to_string(),
         ldo_token: "reward0000".to_string(),
         staking_token: "staking0000".to_string(),
-        distribution_schedule: vec![
-            (12345, 12345 + 100, Uint128::from(1000000u128)),
-        ],
+        distribution_schedule: vec![(12345, 12345 + 100, Uint128::from(1000000u128))],
     };
 
     let info = mock_info("addr0000", &[]);
@@ -510,7 +508,7 @@ fn test_withdraw_multiple_holders() {
                 recipient: "addr0001".to_string(),
                 amount: Uint128::from(750000u128),
             })
-                .unwrap(),
+            .unwrap(),
             funds: vec![],
         }))]
     );
@@ -528,7 +526,7 @@ fn test_withdraw_multiple_holders() {
                 recipient: "addr0002".to_string(),
                 amount: Uint128::from(250000u128),
             })
-                .unwrap(),
+            .unwrap(),
             funds: vec![],
         }))]
     );
