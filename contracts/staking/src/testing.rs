@@ -747,18 +747,19 @@ fn test_add_distribution_periods_with_nonzero_bond() {
     let distribution_amount = Uint128::from(10000000u128);
     let msg = ExecuteMsg::AddDistributionPeriods {
         periods: vec![(
-            env.block.height, env.block.height + 100,
+            env.block.height,
+            env.block.height + 100,
             distribution_amount)],
     };
     let info = mock_info("distribution0000", &[]);
     let _res = execute(deps.as_mut(), env.clone(), info, msg).unwrap();
-    
+
     // try to withdraw after 100 blocks, should be distribution_amount
     env.block.height += 100;
     let info = mock_info("addr0000", &[]);
 
     let msg = ExecuteMsg::Withdraw {};
-    let res = execute(deps.as_mut(), env.clone(), info, msg).unwrap();
+    let res = execute(deps.as_mut(), env, info, msg).unwrap();
 
     assert_eq!(
         res.messages,
