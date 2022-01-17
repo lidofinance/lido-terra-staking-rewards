@@ -749,7 +749,7 @@ fn test_add_distribution_periods_with_nonzero_bond() {
         periods: vec![(
             env.block.height,
             env.block.height + 100,
-            distribution_amount
+            distribution_amount,
         )],
     };
     let info = mock_info("distribution0000", &[]);
