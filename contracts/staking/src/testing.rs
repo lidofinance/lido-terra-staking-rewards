@@ -696,3 +696,82 @@ fn test_add_distribution_periods() {
         }
     );
 }
+
+#[test]
+fn test_add_distribution_periods_with_nonzero_bond() {
+    let mut deps = mock_dependencies(&[]);
+
+    let msg = InstantiateMsg {
+        distribution_account: "distribution0000".to_string(),
+        ldo_token: "reward0000".to_string(),
+        staking_token: "staking0000".to_string(),
+        distribution_schedule: vec![],
+    };
+
+    let info = mock_info("addr0000", &[]);
+    let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+
+    // bond 100 tokens
+    let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
+        sender: "addr0000".to_string(),
+        amount: Uint128::from(100u128),
+        msg: to_binary(&Cw20HookMsg::Bond {}).unwrap(),
+    });
+    let info = mock_info("staking0000", &[]);
+    let mut env = mock_env();
+    let _res = execute(deps.as_mut(), env.clone(), info, msg).unwrap();
+
+    // 100 blocks passed
+    env.block.height += 100;
+    let info = mock_info("addr0000", &[]);
+
+    // try to withdraw, should be zero
+    let msg = ExecuteMsg::Withdraw {};
+    let res = execute(deps.as_mut(), env.clone(), info, msg).unwrap();
+
+    assert_eq!(
+        res.messages,
+        vec![SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: "reward0000".to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                recipient: "addr0000".to_string(),
+                amount: Uint128::from(0u128),
+            })
+            .unwrap(),
+            funds: vec![],
+        }))]
+    );
+
+    // add a period of 100 from current block
+    env.block.height += 100;
+    let distribution_amount = Uint128::from(10000000u128);
+    let msg = ExecuteMsg::AddDistributionPeriods {
+        periods: vec![(
+            env.block.height,
+            env.block.height + 100,
+            distribution_amount,
+        )],
+    };
+    let info = mock_info("distribution0000", &[]);
+    let _res = execute(deps.as_mut(), env.clone(), info, msg).unwrap();
+
+    // try to withdraw after 100 blocks, should be distribution_amount
+    env.block.height += 100;
+    let info = mock_info("addr0000", &[]);
+
+    let msg = ExecuteMsg::Withdraw {};
+    let res = execute(deps.as_mut(), env, info, msg).unwrap();
+
+    assert_eq!(
+        res.messages,
+        vec![SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: "reward0000".to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                recipient: "addr0000".to_string(),
+                amount: distribution_amount,
+            })
+            .unwrap(),
+            funds: vec![],
+        }))]
+    );
+}
