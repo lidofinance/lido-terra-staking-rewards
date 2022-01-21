@@ -57,6 +57,9 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::AddDistributionPeriods { periods } => {
             add_distribution_periods(deps, env, info, periods)
         }
+        ExecuteMsg::ChangeDistributionAccount { new_account } => {
+            change_distribution_account(deps, env, info, new_account)
+        }
         ExecuteMsg::MigrateStaking {
             new_staking_contract,
         } => migrate_staking(deps, env, info, new_staking_contract),
@@ -76,6 +79,24 @@ pub fn add_distribution_periods(
     }
 
     config.distribution_schedule.extend(periods);
+    store_config(deps.storage, &config)?;
+
+    Ok(Response::default())
+}
+
+pub fn change_distribution_account(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    new_account: String,
+) -> StdResult<Response> {
+    let mut config: Config = read_config(deps.storage)?;
+
+    if info.sender != config.distribution_account {
+        return Err(StdError::generic_err("unauthorized"));
+    }
+
+    config.distribution_account = deps.api.addr_validate(&new_account)?;
     store_config(deps.storage, &config)?;
 
     Ok(Response::default())

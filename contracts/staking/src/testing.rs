@@ -775,3 +775,53 @@ fn test_add_distribution_periods_with_nonzero_bond() {
         }))]
     );
 }
+
+#[test]
+fn test_change_distribution_account() {
+    let mut deps = mock_dependencies(&[]);
+
+    let msg = InstantiateMsg {
+        distribution_account: "distribution0000".to_string(),
+        ldo_token: "reward0000".to_string(),
+        staking_token: "staking0000".to_string(),
+        distribution_schedule: vec![],
+    };
+
+    let info = mock_info("addr0000", &[]);
+    let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+
+    // change account from an unauthorized address, should fail
+    let msg = ExecuteMsg::ChangeDistributionAccount {
+        new_account: "reward0000".to_string(),
+    };
+    let info = mock_info("staking0000", &[]);
+    let env = mock_env();
+    let res = execute(deps.as_mut(), env, info, msg);
+
+    match res {
+        Err(StdError::GenericErr { msg, .. }) => assert_eq!(msg, "unauthorized"),
+        _ => panic!("Must return unauthorized error"),
+    }
+
+    // change account from an authorized address
+    let msg = ExecuteMsg::ChangeDistributionAccount {
+        new_account: "distribution0001".to_string(),
+    };
+    let info = mock_info("distribution0000", &[]);
+    let env = mock_env();
+    let _res = execute(deps.as_mut(), env, info, msg).unwrap();
+
+    // query config response
+    assert_eq!(
+        from_binary::<ConfigResponse>(
+            &query(deps.as_ref(), mock_env(), QueryMsg::Config {},).unwrap()
+        )
+        .unwrap(),
+        ConfigResponse {
+            distribution_account: "distribution0001".to_string(),
+            ldo_token: "reward0000".to_string(),
+            staking_token: "staking0000".to_string(),
+            distribution_schedule: vec![],
+        }
+    );
+}
